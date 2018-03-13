@@ -8,13 +8,16 @@
 
 import UIKit
 import CoreData
+import RealmSwift
 
 class CategoryViewController: UITableViewController {
     
-    var categories = [Category]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    let realm = try! Realm()
     
-   
+    //var categories = [Category]()
+   // let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext -- used for Core Data
+    
+    var categories : Results<Category>?
     
     
     override func viewDidLoad() {
@@ -31,21 +34,24 @@ class CategoryViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        cell.textLabel?.text = categories[indexPath.row].name
+        cell.textLabel?.text = categories?[indexPath.row].name ?? "No Categories created yet"
         
         return cell
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categories.count
+        return categories?.count ?? 1
     }
     
     //MARK: - Data Manipulation Methods
     
-    func saveCategories() {
+    func saveCategories(category : Category) {
         
         do {
-            try context.save()
+           // try context.save()  -- in case of Core Data
+            try realm.write {
+                realm.add(category)
+            }
         } catch {
             print("Error saving data : \(error)")
         }
@@ -54,13 +60,16 @@ class CategoryViewController: UITableViewController {
        
     }
     
-    func loadCategories (with request : NSFetchRequest<Category> = Category.fetchRequest()) {
+    func loadCategories () {
         
-        do {
-           categories =  try context.fetch(request)
-        } catch {
-            print("Error fetching data \(error)")
-        }
+        categories = realm.objects(Category.self)
+        
+     //    request : NSFetchRequest<Category> = Category.fetchRequest()
+//        do {
+//           categories =  try context.fetch(request)
+//        } catch {
+//            print("Error fetching data \(error)")
+//        }
         tableView.reloadData()
     }
     
@@ -73,7 +82,7 @@ class CategoryViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let destinationVC = segue.destination as! TodoListViewController
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categories[indexPath.row]
+            destinationVC.selectedCategory = categories?[indexPath.row]
         }
         
     }
@@ -90,10 +99,11 @@ class CategoryViewController: UITableViewController {
         }
         
         let action = UIAlertAction.init(title: "Add", style: .default) { (action) in
-           let newCategory = Category(context: self.context)
+           //let newCategory = Category(context: self.context) -- used in case of Core Date
+            let newCategory = Category()
             newCategory.name = textField.text!
-            self.categories.append(newCategory)
-           self.saveCategories()
+        //    self.categories.append(newCategory)
+           self.saveCategories(category: newCategory)
         }
    
         alert.addAction(action)
